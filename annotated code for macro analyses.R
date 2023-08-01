@@ -114,9 +114,6 @@ summary(clim01)
 
 ## assess the relationship between species climatic conditions and pruinescence on different body segments
 
-# create a couple of binomial response variables that correspond to pruinescence on each body segment
-macro.dat$pruin.thor.yn <- ifelse(macro.dat$pruin.thorax == 0, 0, 1)
-macro.dat$pruin.abdo.yn <- ifelse(macro.dat$pruin.abdo == 0, 0, 1)
 
 ## test thorax first
 thorax01 <- phyloglm(pruin.thor.yn ~ z.MAT + z.arid, data = macro.dat, boot = 1000, phy = na.drags, method = 'logistic_MPLE', btol = 50)
