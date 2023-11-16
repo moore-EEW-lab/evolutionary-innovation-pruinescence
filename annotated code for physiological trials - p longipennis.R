@@ -16,14 +16,14 @@ library(phylosignal)
 library(phylobase)
 library(viridis)
 
-pruin.heat <- read.csv('pruin.heat.manip.csv')
-pruin.dry <- read.csv('pruin.dry.manip.csv')
+long.heat <- read.csv('long.heat.csv')
+long.dry <- read.csv('long.dry.manip.csv')
 
-#### non-linear model to test if removing male pruinescence ('m' for manipulated) causes different patterns of heating compared to males with intact pruinescence ('c' for controls)
+#### non-linear model to test if removing male pruinescence ('m' for manipulated) causes different patterns of heating compared to males with intact pruinescence ('c' for controls) in P. longipennis
 heat01 = nlme(temp.gain ~ SSasymp(time, Asym, R0, lrc),
 	fixed = list(Asym ~ as.factor(Treatment) + z.mass, R0 ~ as.factor(Treatment) + z.mass, lrc ~ as.factor(Treatment) + z.mass), 
 	random = Asym + R0 + lrc ~ 1|ID,
-	data = pruin.heat, 
+	data = long.heat, 
 	start = list(fixed = c(Asym = c(8,4,1), R0 = c(0, 0.4, 0.05), lrc = c(-3, -3, -0.1))),
 	control = list(returnObject = TRUE, 
 		tolerance = 0.01, pnlsmaxIter = 1000000, minScale = 1/2000000000, msMaxIter = 10000000, msMaxEval = 10000000),
@@ -33,7 +33,7 @@ summary(heat01)
 
 # Nonlinear mixed-effects model fit by maximum likelihood
   # Model: temp.gain ~ SSasymp(time, Asym, R0, lrc) 
-  # Data: pruin.heat
+  # Data: long.heat
        # AIC      BIC   logLik
   # 255.6681 317.4406 -111.834
 
@@ -86,13 +86,13 @@ emmeans(heat01, param = 'lrc', specs = 'Treatment')
  # m          -4.44 0.0427 311    -4.53    -4.36
  
  
-### linear mixed-effects model to test if removing male pruinesecence results in greater water loss
-dry01 <- lmer(prop.loss ~ pre.mass + treatment + (1|date), data = pruin.dry)
+### linear mixed-effects model to test if removing male pruinesecence results in greater water loss in P longipennis
+dry01 <- lmer(prop.loss ~ pre.mass + treatment + (1|date), data = long.dry)
 summary(dry01)
 
 # Linear mixed model fit by REML. t-tests use Satterthwaite's method ['lmerModLmerTest']
 # Formula: prop.loss ~ pre.mass + treatment + (1 | date)
-   # Data: pruin.dry
+   # Data: long.dry
 
 # REML criterion at convergence: -280.7
 
