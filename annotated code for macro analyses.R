@@ -50,6 +50,33 @@ summary(repro.strag01)
 # Note: Wald-type p-values for coefficients, conditional on alpha=53.70996
       # Parametric bootstrap results based on 1000 fitted replicates
 
+## prep data for pagel's test
+pruin.yn <- ifelse(macro.dat$pruin.binom == 0, 'non', 'pruin')
+names(pruin.yn) <- macro.dat$binom
+
+repro.strag <- macro.dat$repro.strag
+names(repro.strag) <- macro.dat$binom
+
+# fit four possible models of correlated evolution
+pagel.repro.xy <- fitPagel(tree = na.drags, x = pruin.yn, y = repro.strag)
+pagel.repro.x <- fitPagel(tree = na.drags, x = pruin.yn, y = repro.strag, dep.var = 'x')
+pagel.repro.y <- fitPagel(tree = na.drags, x = pruin.yn, y = repro.strag, dep.var = 'y')
+repro.aic <- c(pagel.repro.xy$independent.AIC, pagel.repro.x$dependent.AIC, pagel.repro.y$dependent.AIC, pagel.repro.xy$dependent.AIC)
+
+repro.aic
+#397.0427 381.8378 398.4935 385.6343
+# best model is that pruin depends on repro strag. 
+
+trans.per.mill <- ((pagel.repro.x$dependent.Q)* 0.335548173)/200 # scale transition rates to known time dating for groups in analysis (Kohli et al. 2021, iScience)
+pagel.repro.x$dependent.Q <- trans.per.mill
+
+pagel.repro.x$dependent.Q # transition rates-
+               # non|f        non|p       pruin|f      pruin|p
+# non|f   -0.007956896  0.007814845  0.0001420513  0.000000000
+# non|p    0.007509774 -0.041663280  0.0000000000  0.034153506
+# pruin|f  0.111199104  0.000000000 -0.1190139484  0.007814845
+# pruin|p  0.000000000  0.111199104  0.0075097738 -0.118708878
+
 
 ## compare the likelihood of pruinescence among typical breeding habitats 
 macro.dat$typical.habitat <- factor(macro.dat$typical.habitat, levels = c('forest', 'both', 'open'))
@@ -81,6 +108,43 @@ summary(hab01)
 
 # Note: Wald-type p-values for coefficients, conditional on alpha=44.0903
       # Parametric bootstrap results based on 1000 fitted replicates
+
+
+## prep data for Pagel's test
+hab.open <- ifelse(macro.dat$typical.habitat == 'forest', 'closed', 'open')
+names(hab.open) <- macro.dat$binom
+
+# run 4 possible models of correlated evolution
+pagel.hab.xy <- fitPagel(tree = na.drags, x = pruin.yn, y = hab.open)
+pagel.hab.x <- fitPagel(tree = na.drags, x = pruin.yn, y = hab.open, dep.var = 'x')
+pagel.hab.y <- fitPagel(tree = na.drags, x = pruin.yn, y = hab.open, dep.var = 'y')
+hab.aic <- c(pagel.hab.xy$independent.AIC, pagel.hab.x$dependent.AIC, pagel.hab.y$dependent.AIC, pagel.hab.xy$dependent.AIC)
+
+hab.aic
+#656.2248 652.9862 652.6614 653.5145
+
+hab.trans.per.mill <- ((pagel.hab.xy$dependent.Q)* 0.335548173)/200 # scale transition rates to known time dating for groups in analysis (Kohli et al. 2021, iScience)
+
+pagel.hab.xy$dependent.Q <- hab.trans.per.mill
+pagel.hab.xy$dependent.Q # transition rates
+
+                   # non|closed   non|open pruin|closed  pruin|open
+# non|closed   -0.11119910  0.1111991   0.00000000  0.00000000
+# non|open      0.09511276 -0.1217264   0.00000000  0.02661363
+# pruin|closed  0.11119910  0.0000000  -0.22239821  0.11119910
+# pruin|open    0.00000000  0.1111991   0.03915986 -0.15035897
+  
+      
+###test if reproductive strategy evolves in a correlated fashion with microhabitat       
+
+## run 4 possible models      
+pagel.hr.xy <- fitPagel(tree = na.drags, x = repro.strag, y = hab.open)
+pagel.hr.x <- fitPagel(tree = na.drags, x = repro.strag, y = hab.open, dep.var = 'x')
+pagel.hr.y <- fitPagel(tree = na.drags, x = repro.strag, y = hab.open, dep.var = 'y')
+hr.aic <- c(pagel.hr.xy$independent.AIC, pagel.hr.x$dependent.AIC, pagel.hr.y$dependent.AIC, pagel.hr.xy$dependent.AIC)
+hr.aic
+#622.1985 622.7133 622.1504 622.9484
+# models are all about equal, so go with the simplest. Which says that there's no correlated evolution between microhabitat and reproductive strategy
       
 ### test if species with warmer and drier ranges are more likely to have pruinescence
 clim01 <- phyloglm(pruin.binom ~ z.MAT + z.arid, data = macro.dat, boot = 1000, phy = na.drags, method = 'logistic_MPLE', btol = 50)
@@ -167,3 +231,48 @@ summary(abdo01)
 # z.arid      -0.380373  0.196572 -1.935035   -0.696560     -0.0277   0.05299 .  
 # ---
 # Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+## test if mating strategy is correlated with macroclimate
+macro.dat$percher.yn <- ifelse(macro.dat$repro.strag == 'p', 1, 0)
+
+perch01 <- phyloglm(percher.yn ~ z.MAT + z.arid, data = macro.dat, boot = 1000, phy = na.drags, method = 'logistic_MPLE', btol = 50)
+summary(perch01)
+
+# Call:
+# phyloglm(formula = percher.yn ~ z.MAT + z.arid, data = macro.dat, 
+    # phy = na.drags, method = "logistic_MPLE", btol = 50, boot = 1000)
+       # AIC     logLik Pen.logLik 
+    # 179.66     -85.83     -79.35 
+
+# Method: logistic_MPLE
+# Mean tip height: 0.6627907
+# Parameter estimate(s):
+# alpha: 6.584329 
+      # bootstrap mean: 0 (on log scale, then back transformed)
+      # so possible downward bias.
+      # bootstrap 95% CI: (1.591721,12.4183)
+
+# Coefficients:
+             # Estimate    StdErr   z.value lowerbootCI upperbootCI p.value
+# (Intercept) -0.011651  0.506916 -0.022984   -0.689793      0.7515  0.9817
+# z.MAT       -0.010895  0.058405 -0.186547   -0.079052      0.0572  0.8520
+# z.arid       0.056697  0.053083  1.068083   -0.023959      0.1270  0.2855
+
+
+## rate of gains and losses of pruinescence
+
+pruin.mod <- fitDiscrete(phy = na.drags, dat = pruin.yn, model = 'ARD', control = list(niter = 100, hessian = TRUE, CI = 95))
+pruin.mod$opt
+
+                # non     pruin
+    # non   -10.74312  10.74312
+    # pruin  79.93264 -79.93264
+
+
+(10.74312 * 0.335548173)/200 # gain of pruin = 0.01802417 transitions per million years 
+(79.93264 * 0.335548173)/200 # loss of pruin = 0.1341063 transitions per million years 
+
+
+1/(0.1341063/1000000) # 1 loss every 7,456,771 years
+1/(0.01802417/1000000) # 1 gain every 55,481,057 years
