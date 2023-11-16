@@ -1,0 +1,156 @@
+library(lme4)
+library(lmerTest)
+library(ggplot2)
+library(phytools)
+library(plyr)
+library(metafor)
+library(lsmeans)
+library(visreg)
+library(car)
+library(nlme)
+library(MuMIn)
+library(ggplot2)
+library(phylosignal)
+library(phylobase)
+library(viridis)
+
+## load data files for heating and desiccation trials
+lyd.heat <- read.csv('lyd.heat.csv')
+lyd.des <- read.csv('lyd.des.csv')
+
+#### non-linear model to test if removing male pruinescence ('m' for manipulated) causes different patterns of heating compared to males with intact pruinescence ('c' for controls)
+
+lyd.heat$Treatment <- as.factor(lyd.heat$Treatment)
+
+heat01 = nlme(temp.gain ~ SSasymp(time, Asym, R0, lrc),
+	fixed = list(Asym ~ Treatment + z.mass, R0 ~ Treatment + z.mass, lrc ~ Treatment + z.mass), 
+	random = Asym + R0 + lrc ~ 1|ID,
+	data = lyd.heat, 
+	start = list(fixed = c(Asym = c(0.1,2,-0.1), R0 = c(-0.03, 0.03, 0.01), lrc = c(-3, -0.1, -0.1))),
+	control = list(returnObject = TRUE, 
+		tolerance = 0.01, pnlsmaxIter = 1000000, minScale = 1/2000000000, msMaxIter = 10000000, msMaxEval = 10000000),
+	na.action = na.exclude)
+	
+summary(heat01)
+# Nonlinear mixed-effects model fit by maximum likelihood
+  # Model: temp.gain ~ SSasymp(time, Asym, R0, lrc) 
+  # Data: lyd 
+       # AIC       BIC   logLik
+  # -290.003 -230.3214 161.0015
+
+# Random effects:
+ # Formula: list(Asym ~ 1, R0 ~ 1, lrc ~ 1)
+ # Level: ID
+ # Structure: General positive-definite, Log-Cholesky parametrization
+                 # StdDev       Corr         
+# Asym.(Intercept) 5.452651e-01 As.(I) R0.(I)
+# R0.(Intercept)   2.456885e-06 -0.469       
+# lrc.(Intercept)  4.917634e-01 -0.469  1.000
+# Residual         1.065814e-01              
+
+# Fixed effects:  list(Asym ~ as.factor(Treatment) + z.mass, R0 ~ as.factor(Treatment) +      z.mass, lrc ~ as.factor(Treatment) + z.mass) 
+                               # Value  Std.Error  DF    t-value p-value
+# Asym.(Intercept)            0.074652 0.16352057 272   0.456532  0.6484
+# Asym.as.factor(Treatment)M  1.690691 0.22078196 272   7.657740  0.0000
+# Asym.z.mass                -0.106846 0.10922979 272  -0.978181  0.3289
+# R0.(Intercept)             -0.032469 0.02752355 272  -1.179696  0.2392
+# R0.as.factor(Treatment)M    0.039360 0.03736817 272   1.053306  0.2931
+# R0.z.mass                  -0.018274 0.01837963 272  -0.994266  0.3210
+# lrc.(Intercept)            -4.005717 0.23464199 272 -17.071613  0.0000
+# lrc.as.factor(Treatment)M  -0.506914 0.27594500 272  -1.837009  0.0673
+# lrc.z.mass                  0.110837 0.12484455 272   0.887803  0.3754
+ # Correlation: 
+                           # As.(I) A..(T) Asym.. R0.(I) R0..(T R0.z.m lr.(I) l..(T)
+# Asym.as.factor(Treatment)M -0.760                                                 
+# Asym.z.mass                -0.190  0.240                                          
+# R0.(Intercept)              0.000  0.001 -0.003                                   
+# R0.as.factor(Treatment)M    0.001  0.029 -0.001 -0.752                            
+# R0.z.mass                  -0.005  0.001  0.026 -0.143  0.218                     
+# lrc.(Intercept)            -0.305  0.231  0.049 -0.046  0.029 -0.050              
+# lrc.as.factor(Treatment)M   0.265 -0.360 -0.077  0.036 -0.090  0.028 -0.866       
+# lrc.z.mass                  0.069 -0.090 -0.398 -0.031  0.005 -0.129 -0.152  0.230
+
+# Standardized Within-Group Residuals:
+        # Min          Q1         Med          Q3         Max 
+# -2.94090416 -0.57439739 -0.01442052  0.61073243  3.41614755 	
+	
+intervals(heat01, which = 'fixed')
+# Approximate 95% confidence intervals
+
+ # Fixed effects:
+                                 # lower        est.       upper
+# Asym.(Intercept)           -0.24253615  0.07465234  0.39184083
+# Asym.as.factor(Treatment)M  1.26242984  1.69069094  2.11895204
+# Asym.z.mass                -0.31872460 -0.10684646  0.10503168
+# R0.(Intercept)             -0.08585814 -0.03246941  0.02091931
+# R0.as.factor(Treatment)M   -0.03312465  0.03936013  0.11184491
+# R0.z.mass                  -0.05392608 -0.01827425  0.01737759
+# lrc.(Intercept)            -4.46086317 -4.00571713 -3.55057110
+# lrc.as.factor(Treatment)M  -1.04217693 -0.50691350  0.02834992
+# lrc.z.mass                 -0.13132943  0.11083739  0.35300421
+# attr(,"label")
+# [1] "Fixed effects:"
+
+emmeans(heat01, specs = 'Treatment', param = 'Asym')
+ # Treatment emmean    SE  df lower.CL upper.CL
+ # C         0.0747 0.161 272   -0.243    0.392
+ # M         1.7653 0.142 272    1.487    2.044
+
+emmeans(heat01, specs = 'Treatment', param = 'lrc')
+ # Treatment emmean    SE  df lower.CL upper.CL
+ # C          -4.01 0.231 272    -4.46    -3.55
+ # M          -4.51 0.136 272    -4.78    -4.24
+
+
+
+### linear mixed-effects model to test if removing male pruinesecence results in greater water loss
+dry01 <- lmer(prop.mass.change ~ pre.mass + treat + (1|date), data = lyd.des)
+summary(dry01)
+# Linear mixed model fit by REML. t-tests use Satterthwaite's method ['lmerModLmerTest']
+# Formula: prop.mass.change ~ pre.mass + treat + (1 | date)
+   # Data: lyd.des
+
+# REML criterion at convergence: -102.1
+
+# Scaled residuals: 
+     # Min       1Q   Median       3Q      Max 
+# -1.40995 -0.86918  0.00369  0.81848  1.83216 
+
+# Random effects:
+ # Groups   Name        Variance  Std.Dev.
+ # date     (Intercept) 0.0000000 0.00000 
+ # Residual             0.0003367 0.01835 
+# Number of obs: 23, groups:  date, 3
+
+# Fixed effects:
+             # Estimate Std. Error        df t value Pr(>|t|)    
+# (Intercept)  0.122663   0.053419 20.000000   2.296   0.0326 *  
+# pre.mass    -0.066190   0.125786 20.000000  -0.526   0.6045    
+# treatm       0.054414   0.007704 20.000000   7.063 7.55e-07 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+# Correlation of Fixed Effects:
+         # (Intr) pr.mss
+# pre.mass -0.995       
+# treatm    0.038 -0.107
+# optimizer (nloptwrap) convergence code: 0 (OK)
+# boundary (singular) fit: see ?isSingular
+
+# estimated marginal means
+emmeans(dry01, specs = 'treat')
+ # treat emmean      SE   df lower.CL upper.CL
+ # c     0.0945 0.00547 5.53   0.0808    0.108
+ # m     0.1489 0.00562 6.76   0.1355    0.162
+
+# Degrees-of-freedom method: kenward-roger 
+# Confidence level used: 0.95 
+
+# confidence intervals
+confint(dry01)
+                  # 2.5 %     97.5 %
+# .sig01       0.00000000 0.01050065
+# .sigma       0.01314645 0.02355854
+# (Intercept)  0.02080764 0.22451837
+# pre.mass    -0.30602770 0.17364726
+# treatm       0.03972400 0.06910330
